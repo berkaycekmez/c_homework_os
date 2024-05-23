@@ -21,13 +21,19 @@ typedef struct {
 
 // Queue structure
 typedef struct {
-    Process *arr[MAX_QUEUE_SIZE];
+    Process* arr[MAX_QUEUE_SIZE];
     int front, rear;
 } Queue;
 
+// Function prototypes
+void fcfs_scheduler(Process* processes, int num_processes, FILE* output_file);
+void add_process_to_queue(Process* process, Queue* queue);
+Process* remove_process_from_queue(Queue* queue);
+int is_queue_empty(Queue* queue);
+
 int main() {
-    FILE *input_file = fopen("input.txt", "r");
-    FILE *output_file = fopen("output.txt", "w");
+    FILE* input_file = fopen("input.txt", "r");
+    FILE* output_file = fopen("output.txt", "w");
 
     if (input_file == NULL || output_file == NULL) {
         printf("Error opening files!\n");
@@ -39,13 +45,16 @@ int main() {
 
     // Read processes from input file
     while (fscanf(input_file, "%[^,],%d,%d,%d,%d,%d\n", processes[num_processes].name,
-                  &processes[num_processes].arrival_time, &processes[num_processes].priority,
-                  &processes[num_processes].burst_time, &processes[num_processes].ram_required,
-                  &processes[num_processes].cpu_rate) == 6) {
+        &processes[num_processes].arrival_time, &processes[num_processes].priority,
+        &processes[num_processes].burst_time, &processes[num_processes].ram_required,
+        &processes[num_processes].cpu_rate) == 6) {
         num_processes++;
     }
 
     fclose(input_file);
+
+    // Perform scheduling
+    fcfs_scheduler(processes, num_processes, output_file);
 
     fclose(output_file);
 
@@ -83,4 +92,48 @@ int main() {
     printf("\n");
 
     return 0;
+}
+
+void fcfs_scheduler(Process* processes, int num_processes, FILE* output_file) {
+    Queue cpu1_queue = { .front = 0, .rear = -1 };
+    int current_time = 0;
+
+    // Queue up all priority-0 processes
+    for (int i = 0; i < num_processes; i++) {
+        if (processes[i].priority == 0) {
+            fprintf(output_file, "Process %s is queued to be assigned to CPU-1.\n", processes[i].name);
+            add_process_to_queue(&processes[i], &cpu1_queue);
+        }
+    }
+
+    // Execute processes in FCFS order
+    while (!is_queue_empty(&cpu1_queue)) {
+        Process* current_process = remove_process_from_queue(&cpu1_queue);
+        fprintf(output_file, "Process %s is assigned to CPU-1.\n", current_process->name);
+        current_time += current_process->burst_time;
+        fprintf(output_file, "Process %s is completed and terminated.\n", current_process->name);
+    }
+}
+
+void add_process_to_queue(Process* process, Queue* queue) {
+    if (queue->rear == MAX_QUEUE_SIZE - 1) {
+        printf("Queue is full!\n");
+        return;
+    }
+    queue->rear++;
+    queue->arr[queue->rear] = process;
+}
+
+Process* remove_process_from_queue(Queue* queue) {
+    if (is_queue_empty(queue)) {
+        printf("Queue is empty!\n");
+        return NULL;
+    }
+    Process* process = queue->arr[queue->front];
+    queue->front++;
+    return process;
+}
+
+int is_queue_empty(Queue* queue) {
+    return (queue->front > queue->rear);
 }
